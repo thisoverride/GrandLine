@@ -1,0 +1,10 @@
+{
+  "name": "grand-line",
+  "version": "1.0.0",
+  "main": "index.js",
+  "repository": "https://github.com/thisoverride/GrandLine.git",
+  "scripts": {
+    "svc-create": "sh bin/setup.sh"
+  },
+  "license": "MIT"
+}
