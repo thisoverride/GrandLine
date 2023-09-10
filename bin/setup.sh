@@ -51,8 +51,8 @@ cd "$project_name" || exit
 # Créer les répertoires src, build, et test s'ils n'existent pas déjà
 create_directory src
 create_directory build
-create_directory tests/___unit___/
-touch tests/___unit___/index.test.ts
+create_directory src/tests/___unit___/
+touch src/tests/___unit___/index.test.ts
 
 # Créer un fichier Dockerfile s'il n'existe pas déjà
 touch Dockerfile
