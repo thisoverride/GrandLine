@@ -1,21 +1,24 @@
 export default class PathValidator{
 
-    public checkPath (route: string): Array<string> {
-        const regex: RegExp = /@([A-Z]+)\(([^)]+)\)/;;
+    public checkPath(route: string): Array<string> {
+        const validHttpMethods: string[] = ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"];
+        const regex: RegExp = /@([A-Z]+)\(([^)]+)\)/;
         const matches: RegExpExecArray | null = regex.exec(route);
-        const routeSplited: Array<string> = [];
+      
         if (!matches) {
-            throw new Error(`Error route injection ${route} is not correct route injection failed`)
-        } 
-        const httpMethod = matches[1]; // Extract the HTTP method (GET)
-        const endpoints = matches[2].split('.'); // Split the endpoint string into parts
-        const path = endpoints[0] || '';
-        const controller = endpoints[1] || '';
-        const result = `${httpMethod}.${path}.${controller}`;
-        routeSplited.push (...result.split('.'));
-
-    return routeSplited
-
-    }
-    
+          throw new Error(`Error route injection ${route} is not a correct route injection.`);
+        }
+      
+        const httpMethod: string = matches[1];
+      
+        if (!validHttpMethods.includes(httpMethod)) {
+          throw new Error(`Error route injection ${route} has an invalid HTTP method ${httpMethod}.`);
+        }
+      
+        const endpoints: string[] = matches[2].split('.');
+        const path: string = endpoints[0] || '';
+        const controller: string = endpoints[1] || '';
+      
+        return [httpMethod, path, controller];
+      }
 }

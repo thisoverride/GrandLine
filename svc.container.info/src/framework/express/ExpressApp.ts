@@ -4,9 +4,9 @@ import ContainerController from "../../controller/ContainerController";
 import PathValidator from "../validator/PathValidator";
 
 export default class ExpressApp {
-  private app: Application;
-  private controller: Array<any>;
-  private PathValidator: PathValidator;
+  public app: Application;
+  public controller: Array<any>;
+  public PathValidator: PathValidator;
 
   public constructor() {
     this.app = express();

@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "ts-node-dev src/main.ts",
     "prod": "node build/main.js",
+    "test": "jest",
     "build": "tsc"
   },
   "devDependencies": {
@@ -17,7 +18,9 @@
     "typescript": "^5.2.2"
   },
   "dependencies": {
+    "@types/jest": "^29.5.4",
     "express": "^4.18.2",
-    "morgan": "^1.10.0"
+    "morgan": "^1.10.0",
+    "ts-jest": "^29.1.1"
   }
 }
