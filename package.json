@@ -4,7 +4,7 @@
   "main": "index.js",
   "repository": "https://github.com/thisoverride/GrandLine.git",
   "scripts": {
-    "svc-create": "sh bin/setup.sh"
+    "svc-create": "sh bin/setup"
   },
   "license": "MIT"
 }
