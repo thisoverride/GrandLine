@@ -1,5 +1,5 @@
 import morgan from "morgan";
-import ContainerController from "../../../../controller/ContainerController";
+import ContainerController from "../../../../adapter/controller/AuthenticationController";
 import PathValidator from "../../../../framework/validator/PathValidator";
 import ExpressApp from "../../../../framework/express/ExpressApp";
 
