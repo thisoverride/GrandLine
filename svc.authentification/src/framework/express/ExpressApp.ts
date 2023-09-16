@@ -1,9 +1,10 @@
-import express, { Application ,Request, Response,NextFunction  } from "express";
+import express, { Application ,Request, Response } from "express";
 import morgan from "morgan";
 import helmet from "helmet";
 import PathValidator from "../validator/PathValidator";
-import AuthenticationController from "../../adapter/controller/AuthenticationController";
-import database from "../sequelize/sequelize";
+import AuthenticationController from '../../adapter/controller/AuthenticationController'
+import database from '../sequelize/sequelize'
+import EmailNotification from "../../externals/services/notification/EmailNotificator";
 
 export default class ExpressApp {
   public app: Application;
@@ -28,7 +29,7 @@ export default class ExpressApp {
 
   /**
    *
-   * Injects controller routes into the Express.
+   * Injects controllers http methods and routes into the Express.
    * @private
    * @memberof ExpressApp
    */
@@ -48,7 +49,7 @@ export default class ExpressApp {
    * @memberof ExpressApp
    */
   private setupErrorHandling() {
-    this.app.use((err: Error, request: Request, response: Response, next: NextFunction) => {
+    this.app.use((err: Error, request: Request, response: Response) => {
       console.error(err); 
       response.status(500).json({ error: 'An unexpected error occurred.' });
     });
@@ -56,21 +57,24 @@ export default class ExpressApp {
 
   /**
    *
-   * Starts the Express application on the specified port.
+   * Start the Express application on the specified port, 
+   * and connect database. 
    * @param {number} port
    * @memberof ExpressApp
    */
   public async startEngine(port: number) {
-   
-    try{
-      database.authenticate().then(async()=>{
-        // await database.sync({force:true})
-      })
-      this.app.listen(port,() => {
+    const al = new EmailNotification()
+    const dd = al.setEmailTemplate('signup')
+
+    console.log(dd)
+    try {
+      await database.authenticate();
+  
+      this.app.listen(port, () => {
         console.info(`Service running on http://localhost:${port}`);
       });
-      }catch(error){
-        console.error(error)
-      }  
+    } catch (error) {
+      throw new Error(`Connection to database failed: ${error}`);
+    }
   }
 }

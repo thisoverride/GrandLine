@@ -1,9 +1,12 @@
-import e, { Request, Response } from "express";
+import { Request, Response } from "express";
 import bcrypt from "bcrypt";
 import { ControllerImpl } from "./ControllerInterface";
+import UserDto from "../dto/UserDto";
 import UserRepository from "../repositories/UserRepository";
-import { UserI } from "../../framework/sequelize/repositories/User.model";
-import AuthentificatorService from "../../externals/services/AuthentificatorService";
+import AuthenticatorService from "../../externals/services/AuthenticatorService";
+import User from "../../framework/sequelize/repositories/User.model";
+import PathValidator from "../../framework/validator/PathValidator";
+import EmailNotification from "../../externals/services/notification/EmailNotificator";
 
 export default class AuthenticationController implements ControllerImpl {
   public readonly ROUTE: Array<string>;
@@ -12,48 +15,43 @@ export default class AuthenticationController implements ControllerImpl {
     this.ROUTE = [
       "@POST(/signin-grandline,authenticator)",
       "@POST(/portal.signup.grandline,registrator)",
+      "@POST(/forgot-password,resetPasswordRequest)",
     ];
   }
-  public async authenticator(request: Request,response: Response): Promise<void> {
+
+  /**
+   * Authenticates a user.
+   * @param {Request} request - The request object.
+   * @param {Response} response - The response object.
+   * @returns {Promise<void>}
+   */
+  public async authenticator(request: Request, response: Response): Promise<void> {
     try {
       const { grandLineId, password } = request.body;
-      const error: Array<string> = [];
 
-      if (!grandLineId || !password) {
-        response.status(400).json({message:'Both grandLineId and password are required.'})
+      if (!grandLineId || !password || password.trim().length < 8) {
+        response.status(400).json({ message: "Invalid input data." });
+        return;
+      }
+      
+      const pathValidator: PathValidator = new PathValidator()
+      const isValidEmail: boolean = pathValidator.checkEmail(grandLineId)
+
+      if(!isValidEmail){
+        response.status(400).json({ message: "Invalid grandLine Id." });
         return;
       }
 
-      if (password.trim().length < 8) {
-        error.push("The password must be at least 8 characters long.");
-      }
-
-      if (error.length > 0) {
-        response.status(400).json({ message: error });
-        return;
-      }
-
-      const userRepository: UserRepository = new UserRepository();
+      const userRepository = new UserRepository();
       const storedUser = await userRepository.findByGrandLineId(grandLineId);
 
-      if (!storedUser) {
-        response.status(401).json({ message: "User not found." });
+      if (!storedUser || !(await bcrypt.compare(password, storedUser.password))) {
+        response.status(401).json({ message: "Authentication failed." });
         return;
       }
 
-      const passwordMatch = await bcrypt.compare(password, storedUser.password);
-
-      if (!passwordMatch) {
-        error.push("Incorrect password.");
-      }
-
-      if (error.length > 0) {
-        response.status(401).json({ error: "Incorrect password." });
-        return;
-      }
-
-      const authentificatorService = new AuthentificatorService()
-      const token: string = authentificatorService.generateAuthToken(storedUser.id) 
+      const authenticatorService = new AuthenticatorService();
+      const token: string = authenticatorService.generateAuthToken(storedUser.id);
       response.status(200).json({ message: token });
     } catch (error) {
       console.error("Authentication error:", error);
@@ -61,37 +59,114 @@ export default class AuthenticationController implements ControllerImpl {
     }
   }
 
+    /**
+   * Registers a new user.
+   * @param {Request} request - The request object.
+   * @param {Response} response - The response object.
+   * @returns {Promise<void>}
+   */
   public async registrator(request: Request, response: Response): Promise<void> {
     try {
-      const { lastname, firstname, grandLineId, password } = request.body;
-      const error: Array<string> = [];
-      if (!lastname || !firstname || !grandLineId || !password) {
-        response.status(400).json({message:'All fields are required.'});
+      const { firstname, lastname, grandLineId, password } = request.body;
+
+      if (!firstname || !lastname || !grandLineId || !password || password.trim().length < 8) {
+        response.status(400).json({ message: "Invalid input data." });
         return;
       }
 
-      if (password.trim().length < 8) {
-        error.push("The password must be at least 8 characters long");
-      }
-      if (error.length > 0) {
-        response.status(400).json({ error: error });
+      const pathValidator: PathValidator = new PathValidator()
+      const isValidEmail: boolean = pathValidator.checkEmail(grandLineId)
+
+      if(!isValidEmail){
+        response.status(400).json({ message: "Invalid grandLine Id." });
         return;
       }
-      const hashedPassword = await bcrypt.hash(password, 10);
 
-      const user: UserI = {
-        lastname,
-        firstname,
-        grandLineId,
+      const isValidName: RegExp = /^[A-Za-zÀ-ÖØ-öø-ÿ-' ]+$/;
+      const names: Array<string> = [firstname, lastname];
+
+      for (const name of names) {
+        if (!isValidName.test(name.trim())) {
+          response.status(400).json({ message: "Invalid name." });
+          return;
+        }
+      }
+
+      const hashedPassword = await bcrypt.hash(password, 10); // push in function
+      const userDto = new UserDto({
+        id:undefined,
+        firstName: firstname,
+        lastName: lastname,
+        grandLineId: grandLineId,
         password: hashedPassword,
-      };
-      const userRepository: UserRepository = new UserRepository();
-      const result = await userRepository.create(user);
+      });
 
-      response.status(201).json({ message: result });
+      const userRepository = new UserRepository();
+      const isUnique: User | null = await userRepository.findByGrandLineId(userDto.grandLineId);
+
+      if(isUnique === null){
+        const result = await userRepository.create(userDto);
+        response.status(201).json({ message: result });
+      }else{
+        response.status(400).json({ message: "grandLine Id already exists." });
+      }
+
     } catch (error) {
-      console.error("Erreur lors de l'inscription :", error);
-      response.status(500).json({ message: "Erreur serveur lors de l'inscription." });
+      console.error("Registration error:", error);
+      response.status(500).json({ message: "Server error during registration." });
     }
   }
+   /**
+   * Rest user password and sending email.
+   * @param {Request} request - The request object.
+   * @param {Response} response - The response object.
+   * @returns {Promise<void>}
+   */
+   public async resetPasswordRequest(request: Request, response: Response): Promise<void> {
+    const { grandLineId } = request.body;
+
+    if (!grandLineId) {
+      response.status(400).json({ message: "Invalid input data." });
+      return;
+    }
+
+    const pathValidator: PathValidator = new PathValidator()
+    const isValidEmail: boolean = pathValidator.checkEmail(grandLineId)
+
+    if(!isValidEmail){
+      response.status(400).json({ message: "Invalid grandLine Id." });
+      return;
+    }
+    const userRepository = new UserRepository();
+    const user: User | null = await userRepository.findByGrandLineId(grandLineId);
+
+    if(user !== null){
+      const restCode: string = pathValidator.randomPassword(12)
+      const hashedPassword = await bcrypt.hash(restCode, 10);
+      
+      const userDto = new UserDto({
+        id: user.dataValues.id,
+        firstName: user.dataValues.first_name,
+        lastName: user.dataValues.last_name,
+        grandLineId: grandLineId,
+        password: hashedPassword,
+      });
+      
+      const resultPasswordUpdate: User | null = await userRepository.updatePassword(userDto);
+      
+      const emailNotification = new EmailNotification();
+
+      if(resultPasswordUpdate){
+
+        userDto.password = resultPasswordUpdate.dataValues.password;
+        const message = await emailNotification.sendEmailNotification(userDto,restCode);
+        response.status(200).json({ message:message });
+
+      }else{
+        response.status(500).json({ message: "Password update failed." });
+      }
+      
+    }
+
+   }
 }
