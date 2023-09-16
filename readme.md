@@ -1,4 +1,7 @@
-<img width="217" alt="Capture_d_Ã©cran_2023-09-16_Ã _17 24 32-removebg-preview" src="https://github.com/thisoverride/GrandLine/assets/67823632/b47344cb-b225-477d-b7e2-4d4e976e30b2">
+<p align="center">
+  <img width="217" alt="Capture_d_Ã©cran_2023-09-16_Ã _17 24 32-removebg-preview" src="https://github.com/thisoverride/GrandLine/assets/67823632/b47344cb-b225-477d-b7e2-4d4e976e30b2">
+</p>
+
 
 # GrandLine
 
