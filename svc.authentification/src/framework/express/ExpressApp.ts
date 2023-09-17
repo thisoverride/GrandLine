@@ -63,9 +63,6 @@ export default class ExpressApp {
    * @memberof ExpressApp
    */
   public async startEngine(port: number) {
-    // const al = new EmailNotification()
-    // const dd = al.setEmailTemplate('signup')
-
     try {
       await database.authenticate();
   

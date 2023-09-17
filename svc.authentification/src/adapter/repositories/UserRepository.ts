@@ -61,6 +61,32 @@ export default class UserRepository implements RepositoryImpl{
   }
 
   /**
+   * Update the status of a user by their ID.
+   * @param {string} id - The user's ID.
+   * @param {string} status - The new status value.
+   * @returns {Promise<User | null>} - The updated user if found, or null if not found.
+   */
+  public async updateStatus(id: string, status: string): Promise<User | null> {
+    try {
+      const updatedUser = await User.update(
+        { status: status },
+        {
+          where: {
+            id: id,
+          },
+          returning: true, 
+        }
+      );
+      const updatedUserRow = updatedUser[1][0];
+
+      return updatedUserRow || null;
+    } catch (error) {
+      console.error("Error updating user status:", error);
+      throw error;
+    }
+  }
+
+  /**
    * Update the information of an existing user.
    * @param {UserDto} user - The user data to update.
    * @returns {Promise<void>}

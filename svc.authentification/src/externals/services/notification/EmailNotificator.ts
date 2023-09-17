@@ -37,7 +37,7 @@ export default class EmailNotification {
      *
      * @param pNewMovies The list of new movies.
      */
-    public async sendEmailNotification(userDto: UserDto,password: string){
+    public async sendForgotPassword(userDto: UserDto,password: string){
 
       try {
          const notification = this.transporter.sendMail({
@@ -46,7 +46,6 @@ export default class EmailNotification {
           subject: "GrandLine forgot password",
           html: password,
         });
-        console.log(notification)
         return notification;
       } catch (err) {
         console.error(err);
