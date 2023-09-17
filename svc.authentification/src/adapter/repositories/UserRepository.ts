@@ -1,10 +1,11 @@
 import User from "../../framework/sequelize/repositories/User.model";
 import UserDto from "../dto/UserDto";
+import { RepositoryImpl } from "./  RepositoryImpl";
 
 /**
  * Repository for managing users.
  */
-export default class UserRepository {
+export default class UserRepository implements RepositoryImpl{
 
   /**
    * Find a user by ID.
@@ -34,6 +35,7 @@ export default class UserRepository {
         last_name: userDto.lastName,
         grand_line_id: userDto.grandLineId,
         password: userDto.password,
+        status: userDto.status
       });
 
       return newUser;

@@ -2,6 +2,7 @@ import { Model, Table, AutoIncrement, PrimaryKey, Column, AllowNull, NotEmpty, U
 
 export interface UserAttributes {
     id?: number;
+    status: string;
     first_name: string;
     last_name: string;
     grand_line_id: string;
@@ -19,12 +20,17 @@ export default class User extends Model<UserAttributes> {
     @PrimaryKey
     @Column
     override id!: number;
-
+    
     @AllowNull(false)
     @NotEmpty
     @Column
     last_name!: string;
-    
+
+    @AllowNull(false)
+    @NotEmpty
+    @Column
+    status!: string;
+
     @AllowNull(false)
     @NotEmpty
     @Column

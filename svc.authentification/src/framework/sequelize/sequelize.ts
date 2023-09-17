@@ -1,6 +1,7 @@
 import { Sequelize } from "sequelize-typescript";
 import { Dialect } from "sequelize";
 import  User from "./repositories/User.model";
+import VerificationCode from "./repositories/VerificationCode.model";
 import 'dotenv/config';
 
 const database = new Sequelize({
@@ -10,7 +11,7 @@ const database = new Sequelize({
   password: process.env.DB_PASS,
   database: process.env.DB_NAME,
   logging: console.log,
-  models: [User]
+  models: [User,VerificationCode]
 });
 
 export default database;

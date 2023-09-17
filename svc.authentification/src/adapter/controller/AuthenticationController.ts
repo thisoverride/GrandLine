@@ -7,9 +7,17 @@ import AuthenticatorService from "../../externals/services/AuthenticatorService"
 import User from "../../framework/sequelize/repositories/User.model";
 import PathValidator from "../../framework/validator/PathValidator";
 import EmailNotification from "../../externals/services/notification/EmailNotificator";
+import VerificationCodeRepository from "../repositories/VerificationCodeRepository";
+import randomstring from 'randomstring';
+import { VerificationCodeDto } from "../dto/VerificationCodeDto";
+import VerificationCode from "../../framework/sequelize/repositories/VerificationCode.model";
 
 export default class AuthenticationController implements ControllerImpl {
   public readonly ROUTE: Array<string>;
+  private readonly USER_STATUS = {
+    UNCONFIRMED: 'UNCONFIRMED',
+    PASSWORD_RESET_REQUIRED: 'PASSWORD_RESET_REQUIRED',
+  };
 
   public constructor() {
     this.ROUTE = [
@@ -17,6 +25,7 @@ export default class AuthenticationController implements ControllerImpl {
       "@POST(/portal.signup.grandline,registrator)",
       "@POST(/forgot-password,resetPasswordRequest)",
     ];
+
   }
 
   /**
@@ -26,6 +35,7 @@ export default class AuthenticationController implements ControllerImpl {
    * @returns {Promise<void>}
    */
   public async authenticator(request: Request, response: Response): Promise<void> {
+
     try {
       const { grandLineId, password } = request.body;
 
@@ -47,6 +57,11 @@ export default class AuthenticationController implements ControllerImpl {
 
       if (!storedUser || !(await bcrypt.compare(password, storedUser.password))) {
         response.status(401).json({ message: "Authentication failed." });
+        return;
+      }
+      
+      if(storedUser.status === "UNCONFIRMED"){
+        response.status(401).json({ message: `Authentication failed. user status is UNCONFIRMED` });
         return;
       }
 
@@ -94,19 +109,36 @@ export default class AuthenticationController implements ControllerImpl {
 
       const hashedPassword = await bcrypt.hash(password, 10); // push in function
       const userDto = new UserDto({
-        id:undefined,
         firstName: firstname,
         lastName: lastname,
         grandLineId: grandLineId,
         password: hashedPassword,
+        status:'UNCONFIRMED'
       });
 
       const userRepository = new UserRepository();
       const isUnique: User | null = await userRepository.findByGrandLineId(userDto.grandLineId);
 
       if(isUnique === null){
-        const result = await userRepository.create(userDto);
-        response.status(201).json({ message: result });
+
+        const result: User = await userRepository.create(userDto);
+
+        if(result.dataValues.id){
+          const verificationCode: VerificationCodeRepository = new VerificationCodeRepository();
+        
+          const verifyCode: VerificationCode = 
+              await verificationCode.create(new VerificationCodeDto({
+              userId: result.dataValues.id ,
+              email: result.dataValues.grand_line_id,
+              code: randomstring.generate(12)
+            }));
+
+            const emailNotification = new EmailNotification();
+            const messageId = await emailNotification.sendVerificationCode(verifyCode)
+
+
+          response.status(201).json({ message: messageId['messageId'] });
+        }
       }else{
         response.status(400).json({ message: "grandLine Id already exists." });
       }
@@ -116,6 +148,7 @@ export default class AuthenticationController implements ControllerImpl {
       response.status(500).json({ message: "Server error during registration." });
     }
   }
+
    /**
    * Rest user password and sending email.
    * @param {Request} request - The request object.
@@ -150,6 +183,7 @@ export default class AuthenticationController implements ControllerImpl {
         lastName: user.dataValues.last_name,
         grandLineId: grandLineId,
         password: hashedPassword,
+        status : 'PASSWORD_RESET_REQUIRED'
       });
       
       const resultPasswordUpdate: User | null = await userRepository.updatePassword(userDto);
@@ -166,6 +200,9 @@ export default class AuthenticationController implements ControllerImpl {
         response.status(500).json({ message: "Password update failed." });
       }
       
+    }else{
+      
+      response.status(404).json({ message: "Account is not exist" });
     }
 
    }

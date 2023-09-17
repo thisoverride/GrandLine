@@ -4,7 +4,7 @@ import helmet from "helmet";
 import PathValidator from "../validator/PathValidator";
 import AuthenticationController from '../../adapter/controller/AuthenticationController'
 import database from '../sequelize/sequelize'
-import EmailNotification from "../../externals/services/notification/EmailNotificator";
+
 
 export default class ExpressApp {
   public app: Application;
@@ -63,14 +63,14 @@ export default class ExpressApp {
    * @memberof ExpressApp
    */
   public async startEngine(port: number) {
-    const al = new EmailNotification()
-    const dd = al.setEmailTemplate('signup')
+    // const al = new EmailNotification()
+    // const dd = al.setEmailTemplate('signup')
 
-    console.log(dd)
     try {
       await database.authenticate();
   
-      this.app.listen(port, () => {
+      this.app.listen(port, async() => {
+        // await database.sync({force:true})
         console.info(`Service running on http://localhost:${port}`);
       });
     } catch (error) {
