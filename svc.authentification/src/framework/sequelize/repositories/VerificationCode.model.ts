@@ -6,6 +6,7 @@ interface VerificationCodeAttributes {
     userId: number;
     email: string;
     code: string;
+    expAt: Date;
 }
 
 @Table({
@@ -36,4 +37,9 @@ export default class VerificationCode extends Model<VerificationCodeAttributes> 
     @NotEmpty
     @Column
     code!: string;
+
+    @AllowNull(false)
+    @NotEmpty
+    @Column
+    expAt!: Date;
 }

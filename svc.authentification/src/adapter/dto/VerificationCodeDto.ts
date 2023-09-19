@@ -5,6 +5,7 @@ export class VerificationCodeDto {
     public userId: number;
     public email: string;
     public code: string;
+    public expAt: Date;
 
 
     public constructor(verificationCodeAttributes: VerificationCodeAttributes) {
@@ -12,6 +13,7 @@ export class VerificationCodeDto {
         this.userId = verificationCodeAttributes.userId;
         this.email = verificationCodeAttributes.email;
         this.code = verificationCodeAttributes.code;
+        this.expAt = verificationCodeAttributes.expAt
 
     }
 }

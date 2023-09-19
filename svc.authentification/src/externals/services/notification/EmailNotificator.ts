@@ -27,8 +27,8 @@ export default class EmailNotification {
          html: `<h1> Please active you account with code<h1><br/><strong>${verificationCode.code}</strong> is valid for 10 minutes`,
        });
        return notification;
-     } catch (err) {
-       console.error(err);
+     } catch (error) {
+       this.handleError(error)
      }
 
     }
@@ -73,6 +73,9 @@ export default class EmailNotification {
         //     throw new Error(`Error reading email template: ${error}`);
         //   }
         // } 
+        private handleError(error:any){
+          return { message: error.message,status: error.status || 500};
+        }
   }
   
 

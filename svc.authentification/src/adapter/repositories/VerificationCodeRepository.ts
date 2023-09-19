@@ -1,3 +1,4 @@
+import { Op } from 'sequelize';
 import VerificationCode from '../../framework/sequelize/repositories/VerificationCode.model'
 import { VerificationCodeDto } from '../dto/VerificationCodeDto';
 import { RepositoryImpl } from './  RepositoryImpl';
@@ -22,7 +23,8 @@ export default class VerificationCodeRepository implements RepositoryImpl {
                 const createdCode = await VerificationCode.create({
                     userId: verificationCodeDto.userId,
                     email: verificationCodeDto.email,
-                    code: verificationCodeDto.code
+                    code: verificationCodeDto.code,
+                    expAt: verificationCodeDto.expAt
                 });
                 return createdCode; // Renvoie l'objet créé
             } else {
@@ -34,10 +36,14 @@ export default class VerificationCodeRepository implements RepositoryImpl {
     }
     public async findByCode(grandLineId: string, code: string) {
         try {
+            const currentDateTime = new Date();
             const createdCode = await VerificationCode.findOne({
                 where: {
                     email: grandLineId,
-                    code: code
+                    code: code,
+                    expAt: {
+                     [Op.gt]: currentDateTime
+                    }
                 }
             });
             return createdCode;

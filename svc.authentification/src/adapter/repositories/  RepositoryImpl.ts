@@ -26,5 +26,6 @@ create(userDto: any): Promise<any>
    * @returns {Promise<User | null>} The found user or null if it doesn't exist.
    * @throws {Error} If an error occurs during the search.
    */
-    findByGrandLineId(grandLineId: string): Promise<any>
+findByGrandLineId(grandLineId: string): Promise<any>
+
 }

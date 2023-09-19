@@ -3,5 +3,6 @@ export interface VerificationCodeAttributes {
     userId: number;
     email: string;
     code: string;
+    expAt: Date;
 }
 
