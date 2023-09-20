@@ -57,22 +57,22 @@ export default class EmailNotification {
        *
        * @param context content of called function.
        */
-        // public setEmailTemplate(arg: Array<any>): string {
+      // private setEmailTemplate(context: string): string {
 
-        //   const valueToReplace: Array<string> = ["%lastname%"];
-        //   try {
-        //     let htmlTemplate: string = fs.readFileSync(`${__dirname}/template/welcome.html`, "utf-8");
-        
-        //     if (context === 'signup') {
-        //       for(const value of valueToReplace){
-        //         htmlTemplate = htmlTemplate.replace(value, '%ça marche%');
-        //        }   
-        //     }
-        //     return htmlTemplate;
-        //   } catch (error) {
-        //     throw new Error(`Error reading email template: ${error}`);
-        //   }
-        // } 
+      //   const valueToReplace: Array<string> = ["%user_name%","%app_name%"];
+      //   try {
+      //     let htmlTemplate: string = fs.readFileSync(`${__dirname}/template/welcome.html`, "utf-8");
+      
+      //     if (context === 'signup') {
+      //       for(const value of valueToReplace){
+      //         htmlTemplate = htmlTemplate.replace(value, '%ça marche%');
+      //        }   
+      //     }
+      //     return htmlTemplate;
+      //   } catch (error) {
+      //     throw new Error(`Error reading email template: ${error}`);
+      //   }
+      // } 
         private handleError(error:any){
           return { message: error.message,status: error.status || 500};
         }

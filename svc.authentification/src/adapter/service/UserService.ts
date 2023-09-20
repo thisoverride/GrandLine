@@ -1,7 +1,8 @@
+import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken";
+import CryptoJS from 'crypto-js'
 import UserRepository from "../repositories/UserRepository";
 import PathValidator from "../../framework/validator/PathValidator";
-import jwt from "jsonwebtoken";
-import bcrypt from "bcrypt";
 import AuthenticationException from "./exception/AuthenticationException";
 import RegistratorException from "./exception/RegistratorException";
 import { HttpResponse } from "../controller/ControllerInterface";
@@ -10,12 +11,12 @@ import User from "../../framework/sequelize/repositories/User.model";
 import VerificationCodeRepository from "../repositories/VerificationCodeRepository";
 import VerificationCode from "../../framework/sequelize/repositories/VerificationCode.model";
 import { VerificationCodeDto } from "../dto/VerificationCodeDto";
-import randomstring from "randomstring";
 import EmailNotification from "../../externals/services/notification/EmailNotificator";
 
 export default class UserService {
   private readonly userRepository: UserRepository;
   private readonly verificationCodeRepository: VerificationCodeRepository;
+  private readonly emailNotification: EmailNotification;
   private readonly USER_STATUS = {
     CONFIRMED: 'CONFIRMED',
     UNCONFIRMED: 'UNCONFIRMED',
@@ -25,8 +26,15 @@ export default class UserService {
   public constructor(userRepository: UserRepository,verificationCodeRepository: VerificationCodeRepository) {
     this.userRepository = userRepository;
     this.verificationCodeRepository = verificationCodeRepository;
+    this.emailNotification = new EmailNotification();
   }
 
+    /**
+   * Authenticates a user with their Grand Line ID and password.
+   * @param {string} grandLineId - The user's Grand Line ID (email).
+   * @param {string} password - The user's password.
+   * @returns {Promise<HttpResponse>} - An HTTP response with an authentication token or an error message.
+   */
   public async authenticateUser(grandLineId: string,password: string): Promise<HttpResponse> {
     try {
       if (!grandLineId || !password || password.trim().length < 8) {
@@ -61,6 +69,14 @@ export default class UserService {
     }
   }
 
+  /**
+   * Registers a new user with the provided information.
+   * @param {string} firstname - The user's first name.
+   * @param {string} lastname - The user's last name.
+   * @param {string} grandLineId - The user's Grand Line ID (email).
+   * @param {string} password - The user's password.
+   * @returns {Promise<HttpResponse>} - An HTTP response with a success message or an error message.
+   */
   public async registratorUser(firstname: string,lastname: string,grandLineId: string,password: string): Promise<HttpResponse> {
     try {
       if (!firstname || !lastname || !grandLineId || !password || password.trim().length < 8) {
@@ -98,26 +114,23 @@ export default class UserService {
 
       if (isUnique === null) {
         const result: User = await this.userRepository.create(userDto);
-
         let messageId: any;
         if (result.dataValues.id) {
-          const expirationDate = new Date();
-          expirationDate.setMinutes(expirationDate.getMinutes() + 10);
+          const expirationDate = new Date(Date.now() + 10 * 60 * 1000)
+          // expirationDate.setMinutes(expirationDate.getMinutes() + 10);
           
           const verifyCode: VerificationCode =
-            await this.verificationCodeRepository.create(
-              new VerificationCodeDto({
-                userId: result.dataValues.id,
+          await this.verificationCodeRepository.create(
+            new VerificationCodeDto({
+              userId: result.dataValues.id,
                 email: result.dataValues.grand_line_id,
-                code: randomstring.generate(12),
+                code: CryptoJS.lib.WordArray.random(8).toString(CryptoJS.enc.Base64).toLocaleUpperCase(),
                 expAt: expirationDate
               })
-            );
-
-          const emailNotification = new EmailNotification();
-
+              );
+            
           try {
-            messageId = await emailNotification.sendVerificationCode(verifyCode);
+            messageId = await this.emailNotification.sendVerificationCode(verifyCode);
           } catch (error) {
             throw new RegistratorException("email no sended", 500);
           }
@@ -135,6 +148,11 @@ export default class UserService {
     }
   }
 
+    /**
+   * Initiates a password reset for a user based on their Grand Line ID.
+   * @param {string} grandLineId - The user's Grand Line ID (email).
+   * @returns {Promise<HttpResponse>} - An HTTP response with a success message or an error message.
+   */
   public async passwordReset(grandLineId: string): Promise<HttpResponse> {
     try {
       if (!grandLineId) {
@@ -153,7 +171,7 @@ export default class UserService {
       const user: User | null = await this.userRepository.findByGrandLineId(grandLineId);
 
       if (user !== null) {
-        const restCode: string = pathValidator.randomPassword(12);
+        const restCode: string = CryptoJS.lib.WordArray.random(10).toString(CryptoJS.enc.Hex);
         const hashedPassword = await bcrypt.hash(restCode, 10);
 
         const userDto = new UserDto({
@@ -170,23 +188,14 @@ export default class UserService {
 
         if (resultPasswordUpdate) {
           userDto.password = resultPasswordUpdate.dataValues.password;
+          const notification = await this.emailNotification.sendForgotPassword(userDto,restCode);
 
-          const emailNotification = new EmailNotification();
-          const test = await emailNotification.sendForgotPassword(
-            userDto,
-            restCode
-          );
-
-          return { message: test, status: 200 };
+          return { message: notification, status: 200 };
         } else {
-          return this.handleError(
-            new AuthenticationException("Password update failed.", 404)
-          );
+          return this.handleError(new AuthenticationException("Password update failed.", 404));
         }
       } else {
-        return this.handleError(
-          new AuthenticationException("Account is not exist.", 404)
-        );
+        return this.handleError(new AuthenticationException("Account is not exist.", 404));
       }
     } catch (error) {
       if (error instanceof AuthenticationException) {
@@ -197,6 +206,12 @@ export default class UserService {
     }
   }
 
+   /**
+   * Validates a verification code sent to a user's Grand Line ID.
+   * @param {string} grandLineId - The user's Grand Line ID (email).
+   * @param {string} code - The verification code to validate.
+   * @returns {Promise<HttpResponse>} - An HTTP response with a success message or an error message.
+   */
   public async codeValidator(grandLineId: string, code: string): Promise<HttpResponse>{
     try {
 
@@ -232,68 +247,74 @@ export default class UserService {
     }
   }
 
+  /**
+   * Resends a verification code to a user's Grand Line ID.
+   * @param {string} grandLineId - The user's Grand Line ID (email).
+   * @returns {Promise<HttpResponse>} - An HTTP response with a success message or an error message.
+   */
+
   public async resendCode(grandLineId: string): Promise<HttpResponse>{
     try {
       if (!grandLineId) {
-        throw new AuthenticationException('Invalid input data.',400)
+        throw new AuthenticationException('Invalid input data.', 400);
       }
 
-      const pathValidator: PathValidator = new PathValidator();
-      const isValidEmail: boolean = pathValidator.checkEmail(grandLineId);
+      const pathValidator = new PathValidator();
+      const isValidEmail = pathValidator.checkEmail(grandLineId);
 
       if (!isValidEmail) {
-        throw new AuthenticationException('Invalid grandLine Id.',400);
+        throw new AuthenticationException('Invalid grandLine Id.', 400);
       }
 
       const user = await this.userRepository.findByGrandLineId(grandLineId);
 
       if (!user) {
-        throw new AuthenticationException('User not found.',404);
+        throw new AuthenticationException('User not found.', 404);
       }
 
       if (user.status === this.USER_STATUS.CONFIRMED) {
-        throw new AuthenticationException('User is already confirmed.',400);
+        throw new AuthenticationException('User is already confirmed.', 400);
       }
 
-      const existingCode = await this.verificationCodeRepository.findByUserId(user.id.toString());
+      const existingCode = await this.verificationCodeRepository.findByUserId(user.id);
 
-      
+      if (existingCode && existingCode.expAt >= new Date()) {
+        throw new AuthenticationException('A confirmation code has already been sent.', 400);
+      }
 
-      if (existingCode) {
-        if(existingCode.expAt >= new Date()){
-          throw new AuthenticationException('A confirmation code has already been sent.',400);
-        }else{
-          throw new Error('')
+      const newCode = CryptoJS.lib.WordArray.random(8).toString(CryptoJS.enc.Base64);
+      const expirationDate: Date = new Date(Date.now() + 10 * 60 * 1000);
+
+      const updatedVerificationCode: [affectedCount: number] =  await this.verificationCodeRepository.update(newCode,user.id,expirationDate);
+
+        if(updatedVerificationCode.length !> 1 ){
+          throw new AuthenticationException('An error occurred unable to update verification code',500)
         }
-      }
 
-      // const newCode = randomstring.generate(12);
+        const newVerificationCode = await this.verificationCodeRepository.findByUserId(user.id);
 
-      // const newVerificationCode = await verificationCodeRepository.create(
-      //   new VerificationCodeDto({
-      //     userId: user.id,
-      //     email: grandLineId,
-      //     code: newCode,
-      //   })
-      // );
+        if(newVerificationCode == null){
+          throw new AuthenticationException('verification code does not exist',404)          
+        }
 
-      // const emailNotification = new EmailNotification();
-      // const messageId = await emailNotification.sendVerificationCode(newVerificationCode);
+      const messageId = await this.emailNotification.sendVerificationCode(newVerificationCode);
 
-      return {message :'', status:200}
-      // response.status(200).json({ message: "Confirmation code has been resent.", messageId: messageId });
-      
+      return { message: `Confirmation code has been resent ${messageId['messageId']}`, status: 200};
     } catch (error) {
       if (error instanceof AuthenticationException) {
         return this.handleError(error);
       } else {
         throw error;
-      }
-    }
-     
-
+      }      
+    } 
   }
 
+  /**
+   * Handles errors by returning an HTTP response with an error message and status code.
+   * @param {AuthenticationException} error - The error to handle.
+   * @returns {HttpResponse} - An HTTP response with an error message and status code.
+   * @private
+   */
   private handleError(error: AuthenticationException) {
     return { message: error.message, status: error.status || 500 };
   }

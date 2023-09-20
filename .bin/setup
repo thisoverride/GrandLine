@@ -58,78 +58,101 @@ create_directory src/controller/
 create_directory src/framework/express
 
 # Créer les fichiers directement sans touch
-echo "import express, { Application } from 'express';
-import morgan from 'morgan';
-import ControllerDefault from '../../controller/ControllerDefault';
-import PathValidator from '../validator/PathValidator';
+
+
+echo "import express, { Application ,Request, Response,NextFunction } from "express";
+import morgan from "morgan";
+import helmet from "helmet";
+import PathValidator from "../validator/PathValidator";
+import AuthenticationController from "../../adapter/controller/AuthenticationController";
+
 
 export default class ExpressApp {
   public app: Application;
   public controller: Array<any>;
   public PathValidator: PathValidator;
 
+  /**
+   * Creates an instance of ExpressApp.
+   * Initializes middleware and sets up error handling.
+   * @memberof ExpressApp
+   */
   public constructor() {
     this.app = express();
+    this.app.use(helmet());
+    this.app.use(express.json());
     this.app.use(morgan('dev'));
     this.PathValidator = new PathValidator();
-    this.controller = [new ControllerDefault()];
+    this.controller = [new AuthenticationController()];
     this.injectControllers();
+    this.setupErrorHandling();
   }
 
+  /**
+   *
+   * Injects controller routes into the Express.
+   * @private
+   * @memberof ExpressApp
+   */
   private injectControllers(): void {
     this.controller.forEach((controllerObject) => {
       controllerObject.ROUTE.forEach((controllerProperties: string) => {
-        const [method, path, controller] = this.PathValidator.checkPath(controllerProperties);
-
-        switch (method) {
-          case 'GET':
-            this.app.get(path, controllerObject[controller]);
-            break;
-          case 'POST':
-            this.app.post(path, controllerObject[controller]);
-            break;
-          case 'PUT':
-            this.app.put(path, controllerObject[controller]);
-            break;
-          case 'DELETE':
-            this.app.delete(path, controllerObject[controller]);
-            break;
-          default:
-            break;
-        }
+        const [method, path, controller] = this.PathValidator.checkPath(controllerProperties);        
+         (this.app as unknown as { [key: string]: Function })[method](path, controllerObject[controller]);
       });
     });
   }
 
-  public startEngine(port: number): void {
-    this.app.listen(port, () => {
+  /**
+   *
+   * Sets up error handling middleware.
+   * @private
+   * @memberof ExpressApp
+   */
+  private setupErrorHandling() {
+    this.app.use((err: Error, request: Request, response: Response, next: NextFunction) => {
+      console.error(err); 
+      response.status(500).json({ error: 'An unexpected error occurred.'});
+    });
+  }
+
+  /**
+   *
+   * Starts the Express application on the specified port.
+   * @param {number} port
+   * @memberof ExpressApp
+   */
+  public async startEngine(port: number) {
+      this.app.listen(port, () => {
       console.info(\`Service running on http://localhost:\${port}\`);
     });
   }
+}
 }" > src/framework/express/ExpressApp.ts
 
 create_directory src/framework/validator
 
 echo "export default class PathValidator {
-
+  
   public checkPath(route: string): Array<string> {
-    const validHttpMethods: string[] = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS'];
-    const regex: RegExp = /@([A-Z]+)\\(([^)]+)\\)/;
+    const validHttpMethods: string[] = ["GET","POST","PUT","PATCH","DELETE","HEAD","OPTIONS"];
+    const regex: RegExp = /@([A-Z]+)\(([^)]+)\)/;
     const matches: RegExpExecArray | null = regex.exec(route);
 
     if (!matches) {
-      throw new Error(\`Error route injection \${route} is not a correct route injection.\`);
+      throw new Error("Error route injection " + route + " is not a correct route injection.");
     }
 
-    const httpMethod: string = matches[1];
+    let httpMethod: string = matches[1];
 
     if (!validHttpMethods.includes(httpMethod)) {
-      throw new Error(\`Error route injection \${route} has an invalid HTTP method \${httpMethod}.\`);
+      throw new Error("Error route injection " + route + " has an invalid HTTP method " + httpMethod + ".");
     }
+    httpMethod = httpMethod.toLowerCase();
 
-    const endpoints: string[] = matches[2].split('.');
-    const path: string = endpoints[0] || '';
-    const controller: string = endpoints[1] || '';
+    const endpoints: string[] = matches[2].split(",");
+    const path: string = endpoints[0] || "";
+    const controller: string = endpoints[1] || "";
 
     return [httpMethod, path, controller];
   }

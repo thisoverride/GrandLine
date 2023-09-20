@@ -16,9 +16,17 @@ export default class VerificationCodeRepository implements RepositoryImpl {
         }
 
     }
+
+    public async update(strCode: string, id: number,expirationDate: Date ) {
+        try {
+            return await VerificationCode.update({ code: strCode, expAt : expirationDate }, { where: { userId: id } })
+        } catch (error) {
+            throw Error(`${error}`)
+        }
+
+    }
     public async create(verificationCodeDto: VerificationCodeDto): Promise<VerificationCode> {
         try {
-            console.log(verificationCodeDto.id)
             if (verificationCodeDto.userId != undefined) {
                 const createdCode = await VerificationCode.create({
                     userId: verificationCodeDto.userId,
@@ -42,7 +50,7 @@ export default class VerificationCodeRepository implements RepositoryImpl {
                     email: grandLineId,
                     code: code,
                     expAt: {
-                     [Op.gt]: currentDateTime
+                        [Op.gt]: currentDateTime
                     }
                 }
             });
@@ -52,7 +60,7 @@ export default class VerificationCodeRepository implements RepositoryImpl {
             console.error("Error finding verification code:", error);
         }
     }
-    public async findByUserId(id: string): Promise<any> {
+    public async findByUserId(id: number): Promise<VerificationCode | null> {
         try {
             return await VerificationCode.findOne({ where: { userId: id } });
         } catch (error) {
@@ -62,5 +70,6 @@ export default class VerificationCodeRepository implements RepositoryImpl {
     public async findByGrandLineId(grandLineId: string): Promise<any> {
         throw new Error(`Method not implemented ${grandLineId}.`);
     }
+
 
 }

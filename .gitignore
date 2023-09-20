@@ -2,3 +2,5 @@ node_modules
 .DS_STORE
 build
 .env
+.svc.container.orchestration
+.gateway

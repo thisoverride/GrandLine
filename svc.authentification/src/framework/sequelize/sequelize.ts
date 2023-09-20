@@ -3,7 +3,7 @@ import { Dialect } from "sequelize";
 import  User from "./repositories/User.model";
 import VerificationCode from "./repositories/VerificationCode.model";
 import 'dotenv/config';
-const isLocal: boolean = true;
+const isLocal: boolean = false;
 
 const database = new Sequelize({
   dialect: process.env.DB_DIALECT as Dialect,

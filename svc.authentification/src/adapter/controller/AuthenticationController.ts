@@ -107,6 +107,7 @@ export default class AuthenticationController implements ControllerImpl {
   }
 
   /**
+   * @Mapping @POST(/resend-confirmation-code)
    * Resend confirmation code to the user's email.
    * @param {Request} request - The request object.
    * @param {Response} response - The response object.
