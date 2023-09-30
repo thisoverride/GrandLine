@@ -16,7 +16,7 @@ export default class VerificationCodeRepository implements RepositoryImpl {
         }
 
     }
-
+    
     public async update(strCode: string, id: number,expirationDate: Date ) {
         try {
             return await VerificationCode.update({ code: strCode, expAt : expirationDate }, { where: { userId: id } })
@@ -34,12 +34,12 @@ export default class VerificationCodeRepository implements RepositoryImpl {
                     code: verificationCodeDto.code,
                     expAt: verificationCodeDto.expAt
                 });
-                return createdCode; // Renvoie l'objet créé
+                return createdCode;
             } else {
-                throw new Error('L\'ID est requis pour créer un code de vérification.');
+                throw new Error('Invalid id provided verification code is no\'t createad');
             }
         } catch (error) {
-            throw new Error(`Erreur lors de la création du code de vérification : ${error}`);
+            throw new Error(`Error creating verification code : ${error}`);
         }
     }
     public async findByCode(grandLineId: string, code: string) {

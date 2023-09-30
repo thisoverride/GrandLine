@@ -297,7 +297,7 @@ export default class UserService {
           throw new AuthenticationException('verification code does not exist',404)          
         }
 
-      const messageId = await this.emailNotification.sendVerificationCode(newVerificationCode);
+      const messageId = await this.emailNotification.sendVerificationCode(newVerificationCode,user.last_name);
 
       return { message: `Confirmation code has been resent ${messageId['messageId']}`, status: 200};
     } catch (error) {

@@ -1,10 +1,11 @@
 import nodemailer from 'nodemailer';
 import UserDto from '../../../adapter/dto/UserDto';
 import VerificationCode from '../../../framework/sequelize/repositories/VerificationCode.model';
-// import fs from 'fs';
+import fs from 'fs';
 
 export default class EmailNotification {
    private transporter: nodemailer.Transporter;
+   private readonly AppName = { NAME:"GrandLine" } as const
   
     public constructor() {
       this.transporter = nodemailer.createTransport({
@@ -18,7 +19,8 @@ export default class EmailNotification {
       });
     }
   
-    public async sendVerificationCode(verificationCode: VerificationCode){
+    public async sendVerificationCode(verificationCode: VerificationCode,lastName: string){
+
       try {
         const notification = this.transporter.sendMail({
          from: process.env.GMAIL_EMAIL,
@@ -57,26 +59,41 @@ export default class EmailNotification {
        *
        * @param context content of called function.
        */
-      // private setEmailTemplate(context: string): string {
+      private setEmailTemplate(context: string): string {
+        try {
+            let htmlTemplate :string ="";
 
-      //   const valueToReplace: Array<string> = ["%user_name%","%app_name%"];
-      //   try {
-      //     let htmlTemplate: string = fs.readFileSync(`${__dirname}/template/welcome.html`, "utf-8");
+
+            if(context === "signup"){
+              const valueToReplace: Record<string, string> = {"%user_name%": "John","%app_name%": this.AppName.NAME};
+              this.replaceKeyWord(valueToReplace)
+              htmlTemplate = fs.readFileSync(`${__dirname}/template/welcome.html`, "utf-8");
+
+            }
+            
       
-      //     if (context === 'signup') {
-      //       for(const value of valueToReplace){
-      //         htmlTemplate = htmlTemplate.replace(value, '%ça marche%');
-      //        }   
-      //     }
-      //     return htmlTemplate;
-      //   } catch (error) {
-      //     throw new Error(`Error reading email template: ${error}`);
-      //   }
-      // } 
+            return htmlTemplate;
+          } catch (error) {
+            throw new Error(`Error reading email template: ${error}`);
+          }
+      } 
+      private replaceKeyWord(keyWords:  Record<string, string>) : string {
+
+        for(const keyWords of valueToReplace){
+          htmlTemplate = htmlTemplate.replace(keyWords,'')
+        }
+      }
         private handleError(error:any){
           return { message: error.message,status: error.status || 500};
         }
   }
   
 
-  
+  // let htmlTemplate :string ="";
+          
+  // if (context === 'signup') {
+  //    htmlTemplate = fs.readFileSync(`${__dirname}/template/welcome.html`, "utf-8");
+  //   for(const value of valueToReplace){
+  //     htmlTemplate = htmlTemplate.replace(value, '%ça marche%');
+  //    }   
+  //   }

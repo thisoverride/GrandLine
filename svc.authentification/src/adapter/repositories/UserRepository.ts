@@ -40,7 +40,6 @@ export default class UserRepository implements RepositoryImpl{
 
       return newUser;
     } catch (error) {
-      // Handle errors here, e.g., log errors.
       throw new Error(`Error while creating the user: ${error}`);
     }
   }

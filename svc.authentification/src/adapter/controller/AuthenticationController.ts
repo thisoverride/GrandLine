@@ -50,12 +50,7 @@ export default class AuthenticationController implements ControllerImpl {
       const { firstname, lastname, grandLineId, password } = request.body;
 
       const serviceResponse: HttpResponse =
-        await this.userService.registratorUser(
-          firstname,
-          lastname,
-          grandLineId,
-          password
-        );
+        await this.userService.registratorUser(firstname,lastname,grandLineId,password);
 
       response.status(serviceResponse.status)
         .json({ message: serviceResponse.message });
@@ -124,8 +119,6 @@ export default class AuthenticationController implements ControllerImpl {
 
     } catch (error: any) {
       response.status(error.status || 500).json({ message: error.message });
-      console.error("Resend confirmation code error:", error);
-      response.status(500).json({ message: "Server error during code resending." });
     }
   }
 }

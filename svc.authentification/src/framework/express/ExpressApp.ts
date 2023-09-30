@@ -46,8 +46,7 @@ export default class ExpressApp {
       controllerObject.ROUTE.forEach((controllerProperties: string) => {
         const [method, path, controller] = this.PathValidator.checkPath(controllerProperties);
         (this.app as unknown as { [key: string]: Function })[method](path, (req: Request, res: Response) =>
-          controllerObject[controller](req, res)
-        );
+          controllerObject[controller](req, res));
       });
     });
   }
@@ -60,11 +59,11 @@ export default class ExpressApp {
    * @return {void}
    */
   private setupErrorHandling(): void {
-    this.app.use((err: Error, request: Request, response: Response) => {
-      console.error(err); 
-      response.status(500).json({ error: 'An unexpected error occurred.' });
-    });
 
+    this.app.use((req: Request, res: Response) => {
+      res.status(404).send('')
+    });
+    
     this.app.use((err: Error, request: Request, response: Response ,next: NextFunction) => {
       if (err instanceof SyntaxError) {
         response.status(400).json({message: 'Bad request: the format body is incorrect.'});
